@@ -1,10 +1,9 @@
 const path = require('path')
 const express = require('express')
-const { buildSchema } = require('graphql')
-const { graphqlHTTP } = require('express-graphql')
+const { ApolloServer } = require('apollo-server-express')
 
 const { loadFilesSync } = require('@graphql-tools/load-files')
-const { makeExecutalbeSchema } = require('@graphql-tools/schema')
+const { makeExecutableSchema } = require('@graphql-tools/schema')
 
 const typesArray = loadFilesSync('**/*', {
   extensions: ['graphql'],
@@ -12,21 +11,24 @@ const typesArray = loadFilesSync('**/*', {
 
 const resolversArray = loadFilesSync(path.join(__dirname, '**/*.resolvers.js'))
 
-const schema = makeExecutalbeSchema({
-  typeDefs: typesArray,
-  resolvers: resolversArray,
-})
+async function startApolloServer() {
+  const app = express()
 
-const app = express()
-
-app.use(
-  '/graphql',
-  graphqlHTTP({
-    schema: schema,
-    graphiql: true,
+  const schema = makeExecutableSchema({
+    typeDefs: typesArray,
+    resolvers: resolversArray,
   })
-)
 
-app.listen(3000, () => {
-  console.log('Running GraphQL server...')
-})
+  const server = new ApolloServer({
+    schema: schema,
+  })
+
+  await server.start()
+  server.applyMiddleware({ app, path: '/graphql' })
+
+  app.listen(3000, () => {
+    console.log('Running GraphQL server...')
+  })
+}
+
+startApolloServer()
